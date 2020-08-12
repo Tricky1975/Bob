@@ -131,13 +131,16 @@ Group Bob
 			Table Files = QuickNeil.GetTree(rn,Rules[rn].Hidden)
 			CheckData[rn] = CheckData[rn] or {}
 			Table CD = CheckData[rn]
+			Table Found
+			Table Removed
 			bool modified = false
 			if !Files
 				Error("'nil' received for file list for: "..rn)
 				return
 			end
 			For _,fil in ipairs(Files)
-			// Print("!") // Looking for trouble (I mean to find where the trouble is
+				Found[fil] = true
+				// Print("!") // Looking for trouble (I mean to find where the trouble is
 				If !CD[fil]
 					modified = true
 					PrintF("\t\t= New File: %s\n",fil)
@@ -150,6 +153,16 @@ Group Bob
 						CD[FIL].MD5 = Hash
 					end
 				end				
+			End
+			for k,_ in pairs(CD)
+				if !Found[k] 
+					PrintF("\t\t= Removed: %s\n",k)
+					Removed += k
+					modified = true
+				end
+			end
+			for _,r in ipairs(Removed)
+				CD[r] = null
 			End
 			if Modified 
 				for _,commando in ipairs(Rules[rn].Tasks)
