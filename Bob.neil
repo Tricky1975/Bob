@@ -29,7 +29,50 @@
 
 Group Bob
 
+  Int Errors = 0
+
+  Void Error(string err)
+     PrintF("ERROR!\n%s\n",err)
+     Errors++
+  End
+
+  Void TestArguments()
+     Print("Testing Arguments")
+     For i,a in pairs(Args)
+       PrintF("Argument #%4d: %s\n",i,a)
+     End
+  End
+
+  Void Header()
+     PrintF("Bob - version %s\n",QuickNeil.ScriptVersion)
+     Print("(c) Jeroen P. Broks")
+     Print("Released under the terms of the GPL3\n\n")
+  End
+
+  Void Run(script)
+     if !QuickNeil.FileExists(script)
+        Error("Script not found: "..script)
+        return
+     end
+  end
+
   Void Main()
+     // TestArguments()
+     Header()
+     if #Args==0 
+        Print("Usage: Bob <script> [<script2> [<script3> [.....]]]")
+        return 
+     end   
+     for i,s in ipairs(Args)
+	  PrintF("%04d/%04d: Running script: %s\n",i,#Args,s)
+         Run(s..".bob")
+     End
+     Print("\n\nAll done!")
+     if Errors==1
+        Print("There was 1 error")
+     ElseIf Errors>1
+        PrintF("There were %d errors\n",Errors)
+     End
   End
   
 End
