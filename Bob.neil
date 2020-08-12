@@ -23,6 +23,10 @@
 // 
 // Version: 20.08.12
 // End License Information
+
+#MKL_Version "Bob - Bob.neil" "20.08.12"
+#MKL_Lic     "Bob - Bob.neil" "GNU General Public License 3"
+
 Group Bob
 
   Void Main()
