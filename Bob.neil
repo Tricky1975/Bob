@@ -1,0 +1,13 @@
+Group Bob
+
+  Void Main()
+  End
+  
+End
+
+
+
+Init
+  Bob.Main()
+End
+  
