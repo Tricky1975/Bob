@@ -29,56 +29,164 @@
 
 Group Bob
 
-  Int Errors = 0
+	Int Errors = 0
 
-  Void Error(string err)
-     PrintF("ERROR!\n%s\n",err)
-     Errors++
-  End
+	Void Error(string err)
+		PrintF("ERROR!\n%s\n",err)
+		Errors++
+	End
 
-  Void TestArguments()
-     Print("Testing Arguments")
-     For i,a in pairs(Args)
-       PrintF("Argument #%4d: %s\n",i,a)
-     End
-  End
+	Void TestArguments()     
+		Print("Testing Arguments")
+		For i,a in pairs(Args)
+			PrintF("Argument #%4d: %s\n",i,a)
+		End
+	End
 
-  Void Header()
-     PrintF("Bob - version %s\n",QuickNeil.ScriptVersion)
-     Print("(c) Jeroen P. Broks")
-     Print("Released under the terms of the GPL3\n\n")
-  End
+	Void Header()
+		PrintF("Bob - version %s\n",QuickNeil.ScriptVersion)
+		Print("(c) Jeroen P. Broks")
+		Print("Released under the terms of the GPL3\n\n")
+	End
+	
+	Void Clean(table Rules,table Data)
+		table Kill
+		for k,v in pairs(Data)
+			if !Rules[k]
+				PrintF("WARNING! No more data for '%s'! Removing from checkdata!\n",k)
+				Kill += k
+			end
+		end
+		for _,k in ipairs(Kill)
+			Data[k] = null
+		end
+	end
 
-  Void Run(script)
-     if !QuickNeil.FileExists(script)
-        Error("Script not found: "..script)
-        return
-     end
-  end
+	Void Run(String script,Bool AlwaysForce=false)
+		Table CheckData
+		Table Rules
+		Table ScriptLines
+		Table RuleOrder
+		Var CurrentRule
+		Bool Force
+		if !QuickNeil.FileExists(script)
+			Error("Script not found: "..script)
+			return
+		end
+		if !QuickNeil.FileExists(script..".CheckData.lua")
+			QuickNeil.SaveString(script..".CheckData.lua","return {} -- Nothing yet! Hey, this is new!")
+		end
+		String LCheckData 
+		LCheckData = QuickNeil.LoadString(script..".CheckData.lua")
+		var FNCheckData
+		String ErrorCheckData
+		FNCheckData,ErrorCheckData = LuaLoadString(LCheckData,"CheckData")
+		if !FNCheckData
+			Error("Could not read Check Data\n\nLua reported: "..ErrorCheckData)
+			return
+		End
+		CheckData = FNCheckData()
+		ScriptLines = Split(QuickNeil.LoadString(script),"\n")
+		For ln,scrl in ipairs(ScriptLines)
+			scrl = Trim(scrl)
+			String uscrl = scrl:upper() 
+			String CmdC = Left(scrl,1)
+			//PrintF("%5d '%s' >> '%s' (%s)\n",ln,scrl,uscrl,CmdC) // debug
+			// When Bob was created there was no Switch support in Neil, so I had to rely on the dirty way.
+			// It is planned for later, though!
+			If CmdC=="#" || scrl==""
+				// Do nothing!
+			ElseIf CmdC=="$"
+				if Prefixed(uscrl,"$FORCE")
+					Force = true
+				ElseIf Prefixed(uscrl,"$UNFORCE")
+					Force = false   // 1234567 //
+				ElseIf Prefixed(uscrl,"$CHECK ")
+					int tl = #scrl-7
+					String RuleName = Trim(right(scrl,tl))
+					if Rules[RuleName]
+						Error("Dupe $CHECK: "..RuleName)
+						return
+					end
+					CurrentRule = { ["Name"] = RuleName, ["Tasks"]={},["Forced"]=AlwaysForce || Force }
+					RuleOrder += RuleName
+					Rules[RuleName] = CurrentRule
+					// Print("Check not yet ready, but hey! Good Call!")
+				Else
+					Error("Script command not understood! Line #"..ln.." >> "..scrl)
+					return
+				End
+			ElseIf !CurrentRule
+				Error(SprintF("Line #%d requires a '$CHECK' to be done first! >> %s",ln,scrl))
+				return
+			Else
+				// Print("Running: "..scrl)
+				CurrentRule.Tasks += scrl
+			End
+		End	
+		Clean(Rules,CheckData)
+		bool StuffChanged = false
+		For i,rn in ipairs(RuleOrder)			
+			PrintF("\t%04d/%04d: Checking: %s\n",i,#RuleOrder,rn)
+			Table Files = QuickNeil.GetTree(rn,Rules[rn].Hidden)
+			CheckData[rn] = CheckData[rn] or {}
+			Table CD = CheckData[rn]
+			bool modified = false
+			if !Files
+				Error("'nil' received for file list for: "..rn)
+				return
+			end
+			For _,fil in ipairs(Files)
+			// Print("!") // Looking for trouble (I mean to find where the trouble is
+				If !CD[fil]
+					modified = true
+					PrintF("\t\t= New File: %s\n",fil)
+					CD[fil] = {}
+				Else
+					String Hash = QuickNeil.MD5(QuickNeil.LoadString(SPrintF("%s/%s",rn,fil))) 
+					if Hash != CD[Fil].MD5
+						Modified= true
+						PrintF("\t\t= Modified: %s (MD5 hash has changed) (%s != %s)\n",Fil,Hash,CD[Fil].MD5)
+						CD[FIL].MD5 = Hash
+					end
+				end				
+			End
+			if Modified 
+				for _,commando in ipairs(Rules[rn].Tasks)
+					OS.Execute(commando)
+					StuffChanged = true
+				end
+			end
+		End
+		if StuffChanged
+			PrintF("\tSaving modifications for: %s",script)
+			QuickNeil.SaveString(script..".CheckData.lua","do "..Serialize("local ret",CheckData).."\n\nreturn ret\tend")
+		End
+	End
 
-  Void Main()
-     // TestArguments()
-     Header()
-     if #Args==0 
-        Print("Usage: Bob <script> [<script2> [<script3> [.....]]]")
-        return 
-     end   
-     for i,s in ipairs(Args)
-	  PrintF("%04d/%04d: Running script: %s\n",i,#Args,s)
-         Run(s..".bob")
-     End
-     Print("\n\nAll done!")
-     if Errors==1
-        Print("There was 1 error")
-     ElseIf Errors>1
-        PrintF("There were %d errors\n",Errors)
-     End
-  End
-  
+	Void Main()
+		// TestArguments()
+		Header()
+		if #Args==0 
+			Print("Usage: Bob <script> [<script2> [<script3> [.....]]]")
+			return 
+		end   
+		for i,s in ipairs(Args)
+			PrintF("%04d/%04d: Running script: %s\n",i,#Args,s)
+			Run(s..".bob")
+		End
+		Print("\n\nAll done!")
+		if Errors==1
+			Print("There was 1 error")
+			ElseIf Errors>1
+			PrintF("There were %d errors\n",Errors)
+		End
+	End
+
 End
 
 
 
 Init
-  Bob.Main()
+	Bob.Main()
 End
