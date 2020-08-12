@@ -140,20 +140,54 @@ Group Bob
 			end
 			For _,fil in ipairs(Files)
 				Found[fil] = true
-				// Print("!") // Looking for trouble (I mean to find where the trouble is
+				String AFile = SPrintF("%s/%s",rn,fil)
+				Var Info = QuickNeil.FileInfo(AFile)
+				String Hash 
+				if Info.Size>2000000
+					PrintF("WARNING! File '%s' is over 2 Megabytes. Hash scanning will slow the process down too much so I'll skip that!\n",fil)
+					Hash = "Unchecked"
+				Else
+					Hash = QuickNeil.MD5(QuickNeil.LoadString(AFile)) 
+				End
 				If !CD[fil]
 					modified = true
 					PrintF("\t\t= New File: %s\n",fil)
 					CD[fil] = {}
+					CD[Fil].Hash = Hash
+					CD[Fil].Size = Info.Size
+					CD[Fil].CreationTime = Info.CreationTime
+					CD[Fil].Modified     = Info.Modified
+					CD[Fil].Attrib       = Info.Attrib
 				Else
-					String Hash = QuickNeil.MD5(QuickNeil.LoadString(SPrintF("%s/%s",rn,fil))) 
 					if Hash != CD[Fil].MD5
 						Modified= true
 						PrintF("\t\t= Modified: %s (MD5 hash has changed) (%s != %s)\n",Fil,Hash,CD[Fil].MD5)
 						CD[FIL].MD5 = Hash
-					end
+					End
+					if Info.Size!= CD[Fil].Size
+						Modified= true
+						PrintF("\t\t= Modified: %s (Size has changed) (%d != %d)\n",Fil,Info.Size or -1,CD[Fil].Size or 0)
+						CD[FIL].Size = Info.Size
+					End
+					If Info.Created!=CD[Fil].CreationTime
+						Modified= true
+						PrintF("\t\t= Modified: %s (Creation Time has changed) (%s != %s)\n",Fil,Info.Created,CD[Fil].CreationTime)
+						CD[FIL].CreationTime = Info.Created
+					End
+					If Info.Modified!=CD[Fil].Modified
+						Modified= true
+						PrintF("\t\t= Modified: %s (Modified Time has changed) (%s != %s)\n",Fil,Info.Modified,CD[Fil].Modified)
+						CD[FIL].Modified = Info.Modified
+					End
+					If Info.Attrib!=CD[Fil].Attrib
+						Modified= true
+						PrintF("\t\t= Modified: %s (Attributes have changed) (%s != %s)\n",Fil,Info.Attrib,CD[Fil].Attrib)
+						CD[FIL].Attrib = Info.Attrib
+					End
 				end				
 			End
+			// Print("!") // Looking for trouble (I mean to find where the trouble is
+
 			for k,_ in pairs(CD)
 				if !Found[k] 
 					PrintF("\t\t= Removed: %s\n",k)
